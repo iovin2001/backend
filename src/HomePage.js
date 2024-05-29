@@ -19,6 +19,7 @@ const HomePage = () => {
   const [utenti, setUtenti] = useState([]);
   const [currentAsta, setCurrentAsta] = useState(null);
   const [currentLotto, setCurrentLotto] = useState(null);
+  const [categories] = useState(['Arte Moderna', 'Arte Contemporanea', 'Gioielli', 'Antiquariato', 'Libri Antichi', 'Altro']);
 
   const fetchAste = async () => {
     try {
@@ -499,9 +500,17 @@ const HomePage = () => {
                         <label className="text">Copertina:</label>
                         <input className='ccc' type="file" onChange={handleImagesChange} accept="image/*" multiple />
                         <label className="text">Asta:</label>
-                        <input type="text" className='ccc' name="asta" />
+                        <select className='ccc' name="asta">
+                          {aste.map((asta) => (
+                            <option key={asta.id} value={asta.nome}>{asta.nome}</option>
+                          ))}
+                        </select>
                         <label className="text">Categoria:</label>
-                        <input type="text" className='ccc' name="categoria" />
+                        <select className='ccc' name="categoria">
+                          {categories.map((category, index) => (
+                            <option key={index} value={category}>{category}</option>
+                          ))}
+                        </select>
                         <label className="text">Datazione:</label>
                         <input type="text" className='ccc' name="datazione" />
                         <label className="text">Stima:</label>
@@ -534,9 +543,17 @@ const HomePage = () => {
                         <label className="text">Copertina:</label>
                         <input className='ccc' type="file" onChange={handleImagesChange} accept="image/*" multiple />
                         <label className="text">Asta:</label>
-                        <input type="text" className='ccc' name="asta" value={currentLotto?.asta || ''} onChange={(e) => handleChange(e, 'lotti')} />
+                        <select className='ccc' name="asta" value={currentLotto?.asta || ''} onChange={(e) => handleChange(e, 'lotti')}>
+                          {aste.map((asta) => (
+                            <option key={asta.id} value={asta.nome}>{asta.nome}</option>
+                          ))}
+                        </select>
                         <label className="text">Categoria:</label>
-                        <input type="text" className='ccc' name="categoria" value={currentLotto?.categoria || ''} onChange={(e) => handleChange(e, 'lotti')} />
+                        <select className='ccc' name="categoria" value={currentLotto?.categoria || ''} onChange={(e) => handleChange(e, 'lotti')}>
+                          {categories.map((category, index) => (
+                            <option key={index} value={category}>{category}</option>
+                          ))}
+                        </select>
                         <label className="text">Datazione:</label>
                         <input type="text" className='ccc' name="datazione" value={currentLotto?.datazione || ''} onChange={(e) => handleChange(e, 'lotti')} />
                         <label className="text">Stima:</label>
