@@ -4,11 +4,14 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { db, storage } from './firebaseConfig';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { collection, doc, setDoc, getDoc, getDocs, deleteDoc, updateDoc } from 'firebase/firestore';
+import { slide as Menu } from 'react-burger-menu';
+import { useMediaQuery } from 'react-responsive';
 
 const HomePage = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const user = location.state?.user;
+  const isMobile = useMediaQuery({ query: '(max-width: 768px)' });
 
   const [currentView, setCurrentView] = useState('asteCaricate');
   const [images, setImages] = useState([]);
@@ -245,6 +248,25 @@ const HomePage = () => {
 
   return (
     <div className="div">
+      {isMobile && (
+        <Menu>
+          <div className={`div-16 ${currentView === 'asteCaricate' ? 'selected' : ''}`} onClick={() => handleViewChange('asteCaricate')}>
+            {currentView === 'asteCaricate' && <span>— </span>}<span style={{ fontWeight: 400 }}>Aste caricate</span>
+          </div>
+          <div className={`div-16 ${currentView === 'lottiCaricati' ? 'selected' : ''}`} onClick={() => handleViewChange('lottiCaricati')}>
+            {currentView === 'lottiCaricati' && <span>— </span>}<span style={{ fontWeight: 400 }}>Lotti caricati</span>
+          </div>
+          <div className={`div-16 ${currentView === 'utentiCaricati' ? 'selected' : ''}`} onClick={() => handleViewChange('utentiCaricati')}>
+            {currentView === 'utentiCaricati' && <span>— </span>}<span style={{ fontWeight: 400 }}>Utenti</span>
+          </div>
+          <div className="div-19">Lotti venduti</div>
+          <div className="div-20">Panoramica vendite</div>
+          <div className="div-21">Pagamenti</div>
+          <div className="div-23">Impostazioni</div>
+          <div className="div-24">Messaggi</div>
+          <div className="div-25">Log out</div>
+        </Menu>
+      )}
       <div className="div-2">
         <img
           loading="lazy"
@@ -254,7 +276,6 @@ const HomePage = () => {
         />
         <div className="div-3">
           <div className="div-4">
-        
             <div className="div-7" onClick={handleSiteRedirect}>Passa al sito</div>
             <div className="div-8"></div>
             <div className="div-9">
@@ -280,23 +301,25 @@ const HomePage = () => {
       </div>
       <div className="div-13">
         <div className="div-14">
-          <div className="div-15">
-            <div className={`div-16 ${currentView === 'asteCaricate' ? 'selected' : ''}`} onClick={() => handleViewChange('asteCaricate')}>
-              {currentView === 'asteCaricate' && <span>— </span>}<span style={{ fontWeight: 400 }}>Aste caricate</span>
+          {!isMobile && (
+            <div className="div-15">
+              <div className={`div-16 ${currentView === 'asteCaricate' ? 'selected' : ''}`} onClick={() => handleViewChange('asteCaricate')}>
+                {currentView === 'asteCaricate' && <span>— </span>}<span style={{ fontWeight: 400 }}>Aste caricate</span>
+              </div>
+              <div className={`div-16 ${currentView === 'lottiCaricati' ? 'selected' : ''}`} onClick={() => handleViewChange('lottiCaricati')}>
+                {currentView === 'lottiCaricati' && <span>— </span>}<span style={{ fontWeight: 400 }}>Lotti caricati</span>
+              </div>
+              <div className={`div-16 ${currentView === 'utentiCaricati' ? 'selected' : ''}`} onClick={() => handleViewChange('utentiCaricati')}>
+                {currentView === 'utentiCaricati' && <span>— </span>}<span style={{ fontWeight: 400 }}>Utenti</span>
+              </div>
+              <div className="div-19">Lotti venduti</div>
+              <div className="div-20">Panoramica vendite</div>
+              <div className="div-21">Pagamenti</div>
+              <div className="div-23">Impostazioni</div>
+              <div className="div-24">Messaggi</div>
+              <div className="div-25">Log out</div>
             </div>
-            <div className={`div-16 ${currentView === 'lottiCaricati' ? 'selected' : ''}`} onClick={() => handleViewChange('lottiCaricati')}>
-              {currentView === 'lottiCaricati' && <span>— </span>}<span style={{ fontWeight: 400 }}>Lotti caricati</span>
-            </div>
-            <div className={`div-16 ${currentView === 'utentiCaricati' ? 'selected' : ''}`} onClick={() => handleViewChange('utentiCaricati')}>
-              {currentView === 'utentiCaricati' && <span>— </span>}<span style={{ fontWeight: 400 }}>Utenti</span>
-            </div>
-            <div className="div-19">Lotti venduti</div>
-            <div className="div-20">Panoramica vendite</div>
-            <div className="div-21">Pagamenti</div>
-            <div className="div-23">Impostazioni</div>
-            <div className="div-24">Messaggi</div>
-            <div className="div-25">Log out</div>
-          </div>
+          )}
           <div className="div-26">
             <div className="div-27">
               {currentView === 'asteCaricate' && (
