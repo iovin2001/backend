@@ -566,13 +566,13 @@
   }
   
   .bm-menu {
-	background: #373a47;
+	background: #fff;
 	padding: 2.5em 1.5em 0;
 	font-size: 1.15em;
   }
   
   .bm-morph-shape {
-	fill: #373a47;
+	fill: #fff;
   }
   
   .bm-item-list {
@@ -601,11 +601,12 @@
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: #1e2c4c;
+  background-color: #fff;
   z-index: 1000;
   padding: 20px;
   box-sizing: border-box;
-  color: white;
+  background: #073B4C;
+
 }
 
 .burger-menu-open .div-16 {
@@ -651,5 +652,9 @@
   }
   .img{
 	padding-left: 0px;
+  }
+  .div-16{
+	color: #073B4C;
+
   }
 }
