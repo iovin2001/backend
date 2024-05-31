@@ -12,7 +12,7 @@
 	width: 100%;
 	gap: 20px;
 	font-size: 16px;
-	color: var(--txt, #1e2c4c);
+	color: var(--txt, #073B4C);
 	font-weight: 500;
 	line-height: 130%;
 	padding-top: 24px;
@@ -79,7 +79,7 @@
 	cursor: pointer;
   }
   .div-8 {
-	background-color: var(--txt, #1e2c4c);
+	background-color: var(--txt, #073B4C);
 	width: 2px;
 	height: 24px;
 	margin-top: 20px;
@@ -161,7 +161,7 @@
 	display: flex;
 	flex-direction: column;
 	font-size: 14px;
-	color: rgba(7, 59, 76, 0.5);
+	color: #073B4C;
 	font-weight: 400;
 	letter-spacing: -0.28px;
 	line-height: 130%;
@@ -169,7 +169,7 @@
 	padding-left: 88px;
   }
   .div-16 {
-	color: rgba(7, 59, 76, 0.5);
+	color: #073B4C;
 	cursor: pointer;
 	margin-top: 8px;
 	font-size: 16px;
@@ -334,12 +334,12 @@
 	font-family: Poppins, sans-serif;
   }
   .div-37 {
-	background-color: var(--txt, #1e2c4c);
+	background-color: var(--txt, #073B4C);
 	margin-top: 6px;
 	height: 1px;
   }
   .div-38 {
-	background-color: var(--txt, #1e2c4c);
+	background-color: var(--txt, #073B4C);
 	align-self: stretch;
 	width: 2px;
 	height: 47px;
@@ -369,7 +369,7 @@
   .div-40 {
 	justify-content: center;
 	border-radius: 2px;
-	background-color: var(--txt, #1e2c4c);
+	background-color: var(--txt, #073B4C);
 	align-self: end;
 	color: var(--white, #fff);
 	text-align: center;
@@ -391,7 +391,7 @@
 	width: 367px;
 	max-width: 100%;
 	gap: 20px;
-	color: var(--txt, #1e2c4c);
+	color: var(--txt, #073B4C);
 	line-height: 115%;
 	justify-content: space-between;
   }
@@ -421,7 +421,7 @@
 	margin-top: 4px;
   }
   .div-44 {
-	background-color: var(--txt, #1e2c4c);
+	background-color: var(--txt, #073B4C);
 	align-self: start;
 	width: 2px;
 	height: 47px;
@@ -525,13 +525,13 @@
   }
   
   .aste-table button:hover svg {
-	fill: #032a39; /* Cambia il colore dell'icona al passaggio del mouse */
-	stroke: #032a39;
+	fill: #073B4C; /* Cambia il colore dell'icona al passaggio del mouse */
+	stroke: #073B4C;
   }
   
   .aste-table button:active svg {
-	fill: #032a39; /* Cambia il colore dell'icona al click */
-	stroke: #032a39;
+	fill: #073B4C; /* Cambia il colore dell'icona al click */
+	stroke: #073B4C;
   }
   
   .aste-table .icon {
@@ -548,7 +548,7 @@
   }
   
   .bm-burger-bars {
-	background: #073b4c;
+	background: #073B4C;
   }
   
   .bm-cross-button {
