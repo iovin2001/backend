@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import './homepage.css';
+import './styles.css'; // Importa lo stile per il footer
 import { useLocation, useNavigate } from 'react-router-dom';
 import { db, storage } from './firebaseConfig';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { collection, doc, setDoc, getDoc, getDocs, deleteDoc, updateDoc } from 'firebase/firestore';
 import { slide as Menu } from 'react-burger-menu';
 import { useMediaQuery } from 'react-responsive';
+import { Footer } from './Footer'; // Importa il componente Footer
 
 const HomePage = () => {
   const location = useLocation();
@@ -24,8 +26,10 @@ const HomePage = () => {
   const [currentLotto, setCurrentLotto] = useState(null);
   const [selectedItems, setSelectedItems] = useState([]);
   const [categories] = useState(['Arte Moderna', 'Arte Contemporanea', 'Gioielli', 'Antiquariato', 'Libri Antichi', 'Altro']);
-  const [auctionCategory, setAuctionCategory] = useState('');
-  const [hours, setHours] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterAsta, setFilterAsta] = useState('');
+  const [sortOrder, setSortOrder] = useState('relevance');
+  const [bulkAction, setBulkAction] = useState('');
 
   const fetchAste = async () => {
     try {
@@ -75,16 +79,8 @@ const HomePage = () => {
     }
   };
 
-  const handleAuctionCategoryChange = (event) => {
-    setAuctionCategory(event.target.value);
-  };
-
-  const handleHoursChange = (event) => {
-    setHours(event.target.value);
-  };
-
-  const handleSubmit = async (event, collectionName) => {
-    event.preventDefault();
+  const handleSubmit = async (e, collectionName) => {
+    e.preventDefault();
     setLoading(true);
     setError('');
 
@@ -110,31 +106,33 @@ const HomePage = () => {
       }
 
       const data = {
-        nome: event.target.nome.value,
-        descrizione: event.target.descrizione.value,
+        nome: e.target.nome.value,
+        descrizione: e.target.descrizione.value,
         imageUrls: imageUrls,
-        categoria: auctionCategory,
-        ore: auctionCategory === 'a tempo' ? hours : null
+        categoria: e.target.categoria.value
       };
 
       if (collectionName === "asta") {
-        data.dataInizio = event.target.dataInizio.value;
-        data.dataFine = event.target.dataFine.value;
+        data.dataInizio = e.target.dataInizio.value;
+        data.dataFine = e.target.dataFine.value;
+        if (data.categoria === "a tempo") {
+          data.ore = e.target.ore.value;
+        }
         await setDoc(doc(db, collectionName, data.nome), data);
       } else if (collectionName === "lotti") {
-        data.asta = event.target.asta.value;
-        data.categoria = event.target.categoria.value;
-        data.datazione = event.target.datazione.value;
-        data.stima = event.target.stima.value;
-        data.prezzoIniziale = event.target.prezzoIniziale.value;
-        data.prezzoAttuale = event.target.prezzoAttuale.value;
-        data.prezzoRiserva = event.target.prezzoRiserva.value;
-        data.dimensioni = event.target.dimensioni.value;
+        data.asta = e.target.asta.value;
+        data.categoria = e.target.categoria.value;
+        data.datazione = e.target.datazione.value;
+        data.stima = e.target.stima.value;
+        data.prezzoIniziale = e.target.prezzoIniziale.value;
+        data.prezzoAttuale = e.target.prezzoAttuale.value;
+        data.prezzoRiserva = e.target.prezzoRiserva.value;
+        data.dimensioni = e.target.dimensioni.value;
         await setDoc(doc(db, collectionName, data.nome), data);
       }
 
       setImages([]);
-      event.target.reset();
+      e.target.reset();
       setLoading(false);
       setCurrentView(collectionName === "asta" ? 'asteCaricate' : 'lottiCaricati');
       fetchAste();
@@ -161,18 +159,33 @@ const HomePage = () => {
     }
   };
 
-  const handleBulkDelete = async (collectionName) => {
+  const handleBulkAction = async () => {
+    if (bulkAction === "elimina") {
+      await handleBulkDelete();
+    } else if (bulkAction === "archivia") {
+      await handleBulkArchive();
+    }
+  };
+
+  const handleBulkDelete = async () => {
     try {
-      const batchDelete = selectedItems.map(id => deleteDoc(doc(db, collectionName, id)));
+      const batchDelete = selectedItems.map(id => deleteDoc(doc(db, "lotti", id)));
       await Promise.all(batchDelete);
-      if (collectionName === "asta") {
-        fetchAste();
-      } else if (collectionName === "lotti") {
-        fetchLotti();
-      }
+      fetchLotti();
       setSelectedItems([]);
     } catch (error) {
       console.error("Errore nella cancellazione: ", error);
+    }
+  };
+
+  const handleBulkArchive = async () => {
+    try {
+      const batchArchive = selectedItems.map(id => updateDoc(doc(db, "lotti", id), { archiviate: true }));
+      await Promise.all(batchArchive);
+      fetchLotti();
+      setSelectedItems([]);
+    } catch (error) {
+      console.error("Errore nell'archiviazione: ", error);
     }
   };
 
@@ -196,8 +209,8 @@ const HomePage = () => {
     }
   };
 
-  const handleUpdate = async (event, collectionName) => {
-    event.preventDefault();
+  const handleUpdate = async (e, collectionName) => {
+    e.preventDefault();
     setLoading(true);
     setError('');
 
@@ -222,8 +235,8 @@ const HomePage = () => {
           imageUrls: imageUrls,
           dataInizio: currentAsta.dataInizio,
           dataFine: currentAsta.dataFine,
-          categoria: auctionCategory,
-          ore: auctionCategory === 'a tempo' ? hours : null
+          categoria: currentAsta.categoria,
+          ore: currentAsta.categoria === "a tempo" ? currentAsta.ore : undefined,
         });
       } else if (collectionName === "lotti") {
         imageUrls = currentLotto.imageUrls || [];
@@ -266,10 +279,11 @@ const HomePage = () => {
   };
 
   const handleChange = (e, collectionName) => {
+    const { name, value } = e.target;
     if (collectionName === "asta") {
-      setCurrentAsta({ ...currentAsta, [e.target.name]: e.target.value });
+      setCurrentAsta({ ...currentAsta, [name]: value });
     } else if (collectionName === "lotti") {
-      setCurrentLotto({ ...currentLotto, [e.target.name]: e.target.value });
+      setCurrentLotto({ ...currentLotto, [name]: value });
     }
   };
 
@@ -295,10 +309,53 @@ const HomePage = () => {
     window.location.href = 'http://parthenopeaste.com/';
   };
 
+  const handleSearchChange = (e) => {
+    setSearchTerm(e.target.value);
+  };
+
+  const handleFilterAstaChange = (e) => {
+    setFilterAsta(e.target.value);
+  };
+
+  const handleSortOrderChange = (e) => {
+    setSortOrder(e.target.value);
+  };
+
+  const filteredAste = aste.filter(asta => 
+    asta.nome.toLowerCase().includes(searchTerm.toLowerCase())
+  ).filter(asta =>
+    !filterAsta || asta.nome === filterAsta
+  ).sort((a, b) => {
+    if (sortOrder === 'name') {
+      return a.nome.localeCompare(b.nome);
+    } else if (sortOrder === 'startDate') {
+      return new Date(a.dataInizio) - new Date(b.dataInizio);
+    } else {
+      return 0;
+    }
+  });
+
+  const filteredLotti = lotti.filter(lotto => 
+    lotto.nome.toLowerCase().includes(searchTerm.toLowerCase())
+  ).filter(lotto =>
+    !filterAsta || lotto.asta === filterAsta
+  ).sort((a, b) => {
+    if (sortOrder === 'name') {
+      return a.nome.localeCompare(b.nome);
+    } else if (sortOrder === 'initialPrice') {
+      return a.prezzoIniziale - b.prezzoIniziale;
+    } else {
+      return 0;
+    }
+  });
+
   return (
     <div className="div">
       {isMobile && (
         <Menu>
+          <div className="div-1x">
+            <span className="ciao">Ciao, </span><span className="user">{user}</span>
+          </div>
           <div className={`div-16 ${currentView === 'asteCaricate' ? 'selected' : ''}`} onClick={() => handleViewChange('asteCaricate')}>
             {currentView === 'asteCaricate' && <span>— </span>}<span style={{ fontWeight: 400 }}>Aste caricate</span>
           </div>
@@ -352,6 +409,9 @@ const HomePage = () => {
         <div className="div-14">
           {!isMobile && (
             <div className="div-15">
+              <div className="div-1x">
+                <span className="ciao">Ciao, </span><span className="user">{user}</span>
+              </div>
               <div className={` div-16 ${currentView === 'asteCaricate' ? 'selected' : ''}`} onClick={() => handleViewChange('asteCaricate')}>
                 {currentView === 'asteCaricate' && <span>— </span>}<span style={{ fontWeight: 400 }}>Aste caricate</span>
               </div>
@@ -372,112 +432,201 @@ const HomePage = () => {
           <div className="div-26">
             <div className="div-27">
               {currentView === 'asteCaricate' && (
-                <div className="div-28">
-                  <div className="column">
-                    <div className="div-29">
-                      <div className="div-30">Aste Presentate</div>
+                <>
+                  <div className="div-29">
+                    <div className="div-30">Aste Presentate</div>
+                  </div>
+                  <div className="div-28">
+                    <div className="column">
+                      <div className="filters-container">
+                        <div className="filters">
+                          <div className="div-29">
+                            <div className="div-30">{aste.length} aste caricate</div>
+                          </div>
+                          <div className="filter-item">
+                            <label>Cerca</label>
+                            <div className="custom-input-container">
+                              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M9.16667 15.8333C12.8486 15.8333 15.8333 12.8486 15.8333 9.16667C15.8333 5.48477 12.8486 2.5 9.16667 2.5C5.48477 2.5 2.5 5.48477 2.5 9.16667C2.5 12.8486 5.48477 15.8333 9.16667 15.8333Z" stroke="#1E2C4C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                                <path d="M17.5 17.5L13.875 13.875" stroke="#1E2C4C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                              </svg>
+                              <input type="text" placeholder="Cosa cerchi?" className="custom-input" value={searchTerm} onChange={handleSearchChange} />
+                            </div>
+                            <div className="underline"></div>
+                          </div>
+                          <div className="filter-item">
+                            <label>Filtra per categoria</label>
+                            <select className="ccc select-with-svg" value={filterAsta} onChange={handleFilterAstaChange}>
+                              <option className="option-transparent" value="">Categoria</option>
+                              <option className="option-transparent" value="a tempo">A tempo</option>
+                              <option className="option-transparent" value="live">Live</option>
+                            </select>
+                          </div>
+                          <div className="filter-item">
+                            <label>Ordina per</label>
+                            <select className="ccc select-with-svg" value={sortOrder} onChange={handleSortOrderChange}>
+                              <option className="option-transparent" value="relevance">Rilevanza</option>
+                              <option className="option-transparent" value="data">Data</option>
+                              <option className="option-transparent" value="nome">Nome</option>
+                            </select>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="column">
+                        <div className="bulk-action-container">
+                          <select className="ccc1 select-with-svg" name="actions" value={bulkAction} onChange={(e) => setBulkAction(e.target.value)}>
+                            <option className="option-transparent" value="">Azioni</option>
+                            <option className="option-transparent" value="elimina">Elimina</option>
+                            <option className="option-transparent" value="archivia">Archivia</option>
+                          </select>
+                          <button className="div-40x" onClick={handleBulkAction}>Applica</button>
+                        </div>
+                        <div className="div-31">
+                          <table className="aste-table">
+                            <thead>
+                              <tr className='tr'>
+                                <th><input type="checkbox" onChange={() => handleSelectAll(aste)} /></th>
+                                <th>Copertina</th>
+                                <th>Nome</th>
+                                <th>Descrizione</th>
+                                <th>Data Inizio</th>
+                                <th>Data Fine</th>
+                                <th>Azioni</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {filteredAste.map((asta, index) => (
+                                <tr key={index}>
+                                  <td><input type="checkbox" checked={selectedItems.includes(asta.id)} onChange={() => handleSelect(asta.id)} /></td>
+                                  <td><img src={asta.imageUrls ? asta.imageUrls[0] : ''} alt={asta.nome} className="copertina-img" /></td>
+                                  <td>{asta.nome}</td>
+                                  <td>{asta.descrizione}</td>
+                                  <td>{asta.dataInizio}</td>
+                                  <td>{asta.dataFine}</td>
+                                  <td>
+                                    <select className="ccc1 select-with-svg" name="actions" onChange={(e) => {
+                                      if (e.target.value === 'elimina') {
+                                        handleDelete(asta.id, 'asta');
+                                      } else if (e.target.value === 'modifica') {
+                                        handleEdit(asta.id, 'asta');
+                                      }
+                                    }}>
+                                      <option className="option-transparent" value="">Azioni</option>
+                                      <option className="option-transparent" value="elimina">Elimina</option>
+                                      <option className="option-transparent" value="modifica">Modifica</option>
+                                    </select>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
                     </div>
-                    <div className="div-31">
-                      
-                      <table className="aste-table">
-                        <thead>
-                          <tr>
-                            <th><input type="checkbox" onChange={() => handleSelectAll(aste)} /></th>
-                            <th>Copertina</th>
-                            <th>Nome</th>
-                            <th>Descrizione</th>
-                            <th>Data Inizio</th>
-                            <th>Data Fine</th>
-                            <th>Azioni <button onClick={() => handleBulkDelete('asta')}>
-                                  <svg fill="#065a74" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" stroke="#065a74" className="icon glyph"><g id="SVGRepo_bgCarrier" strokeWidth="0"></g><g id="SVGRepo_tracerCarrier" strokeLinecap="round" strokeLinejoin="round"></g><g id="SVGRepo_iconCarrier"><path d="M17,4V5H15V4H9V5H7V4A2,2,0,0,1,9,2h6A2,2,0,0,1,17,4Z"></path><path d="M20,6H4A1,1,0,0,0,4,8H5V20a2,2,0,0,0,2,2H17a2,2,0,0,0,2-2V8h1a1,1,0,0,0,0-2ZM11,17a1,1,0,0,1-2,0V11a1,1,0,0,1,2,0Zm4,0a1,1,0,0,1-2,0V11a1,1,0,0,1,2,0Z"></path></g></svg>
-                                </button>
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {aste.map((asta, index) => (
-                            <tr key={index}>
-                              <td><input type="checkbox" checked={selectedItems.includes(asta.id)} onChange={() => handleSelect(asta.id)} /></td>
-                              <td><img src={asta.imageUrls ? asta.imageUrls[0] : ''} alt={asta.nome} className="copertina-img" /></td>
-                              <td>{asta.nome}</td>
-                              <td>{asta.descrizione}</td>
-                              <td>{asta.dataInizio}</td>
-                              <td>{asta.dataFine}</td>
-                              <td>
-                                <button onClick={() => handleEdit(asta.id, 'asta')}>
-                                  <svg fill="#073b4c" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" stroke="#073b4c" className="icon glyph"><g id="SVGRepo_bgCarrier" strokeWidth="0"></g><g id="SVGRepo_tracerCarrier" strokeLinecap="round" strokeLinejoin="round"></g><g id="SVGRepo_iconCarrier"><path d="M8.661,19.113,3,21l1.887-5.661ZM20.386,7.388a2.1,2.1,0,0,0,0-2.965l-.809-.809a2.1,2.1,0,0,0-2.965,0L6.571,13.655l3.774,3.774Z"></path></g></svg>
-                                </button>
-                                <button onClick={() => handleDelete(asta.id, 'asta')}>
-                                  <svg fill="#065a74" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" stroke="#065a74" className="icon glyph"><g id="SVGRepo_bgCarrier" strokeWidth="0"></g><g id="SVGRepo_tracerCarrier" strokeLinecap="round" strokeLinejoin="round"></g><g id="SVGRepo_iconCarrier"><path d="M17,4V5H15V4H9V5H7V4A2,2,0,0,1,9,2h6A2,2,0,0,1,17,4Z"></path><path d="M20,6H4A1,1,0,0,0,4,8H5V20a2,2,0,0,0,2,2H17a2,2,0,0,0,2-2V8h1a1,1,0,0,0,0-2ZM11,17a1,1,0,0,1-2,0V11a1,1,0,0,1,2,0Zm4,0a1,1,0,0,1-2,0V11a1,1,0,0,1,2,0Z"></path></g></svg>
-                                </button>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                    <div className="column-2">
+                      <div className="div-39">
+                        <div className="div-40" onClick={() => handleViewChange('presentaAsta')}>Presenta asta</div>
+                      </div>
                     </div>
                   </div>
-                  <div className="column-2">
-                    <div className="div-39">
-                      <div className="div-40" onClick={() => handleViewChange('presentaAsta')} >Presenta asta</div>
-                    </div>
-                  </div>
-                </div>
+                </>
               )}
-
               {currentView === 'lottiCaricati' && (
-                <div className="div-28">
-                  <div className="column">
-                    <div className="div-29">
-                      <div className="div-30">Lotti Presentati</div>
-                    </div>
-                    <div className="div-31">
-                      <table className="aste-table">
-                        <thead>
-                          <tr>
-                            <th><input type="checkbox" onChange={() => handleSelectAll(lotti)} /></th>
-                            <th>Copertina</th>
-                            <th>Nome</th>           
-                            <th>Categoria</th>
-                            <th>Prezzo Iniziale</th>
-                            <th>Azioni</th>
-                            <th>Azioni <button onClick={() => handleBulkDelete('asta')}>
-                                  <svg fill="#065a74" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" stroke="#065a74" className="icon glyph"><g id="SVGRepo_bgCarrier" strokeWidth="0"></g><g id="SVGRepo_tracerCarrier" strokeLinecap="round" strokeLinejoin="round"></g><g id="SVGRepo_iconCarrier"><path d="M17,4V5H15V4H9V5H7V4A2,2,0,0,1,9,2h6A2,2,0,0,1,17,4Z"></path><path d="M20,6H4A1,1,0,0,0,4,8H5V20a2,2,0,0,0,2,2H17a2,2,0,0,0,2-2V8h1a1,1,0,0,0,0-2ZM11,17a1,1,0,0,1-2,0V11a1,1,0,0,1,2,0Zm4,0a1,1,0,0,1-2,0V11a1,1,0,0,1,2,0Z"></path></g></svg>
-                                </button>
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {lotti.map((lotto, index) => (
-                            <tr key={index}>
-                              <td><input type="checkbox" checked={selectedItems.includes(lotto.id)} onChange={() => handleSelect(lotto.id)} /></td>
-                              <td><img src={lotto.imageUrls ? lotto.imageUrls[0] : ''} alt={lotto.nome} className="copertina-img" /></td>
-                              <td>{lotto.nome}</td>
-                              <td>{lotto.categoria}</td>
-                              <td>{lotto.prezzoIniziale}</td>
-                              <td>
-                                <button onClick={() => handleEdit(lotto.id, 'lotti')}>
-                                  <svg fill="#073b4c" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" stroke="#073b4c" className="icon glyph"><g id="SVGRepo_bgCarrier" strokeWidth="0"></g><g id="SVGRepo_tracerCarrier" strokeLinecap="round" strokeLinejoin="round"></g><g id="SVGRepo_iconCarrier"><path d="M8.661,19.113,3,21l1.887-5.661ZM20.386,7.388a2.1,2.1,0,0,0,0-2.965l-.809-.809a2.1,2.1,0,0,0-2.965,0L6.571,13.655l3.774,3.774Z"></path></g></svg>
-                                </button>
-                                <button onClick={() => handleDelete(lotto.id, 'lotti')}>
-                                  <svg fill="#065a74" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" stroke="#065a74" className="icon glyph"><g id="SVGRepo_bgCarrier" strokeWidth="0"></g><g id="SVGRepo_tracerCarrier" strokeLinecap="round" strokeLinejoin="round"></g><g id="SVGRepo_iconCarrier"><path d="M17,4V5H15V4H9V5H7V4A2,2,0,0,1,9,2h6A2,2,0,0,1,17,4Z"></path><path d="M20,6H4A1,1,0,0,0,4,8H5V20a2,2,0,0,0,2,2H17a2,2,0,0,0,2-2V8h1a1,1,0,0,0,0-2ZM11,17a1,1,0,0,1-2,0V11a1,1,0,0,1,2,0Zm4,0a1,1,0,0,1-2,0V11a1,1,0,0,1,2,0Z"></path></g></svg>
-                                </button>
-                                <button>
-                                  <svg viewBox="0 -4.5 20 20" version="1.1" xmlns="http://www.w3.org/2000/svg" fill="#1e2c4c"><g id="SVGRepo_bgCarrier" strokeWidth="0"></g><g id="SVGRepo_tracerCarrier" strokeLinecap="round" strokeLinejoin="round"></g><g id="SVGRepo_iconCarrier"><title>arrow_down [#1e2c4c]</title><desc>Created with Sketch.</desc><defs></defs><g id="Page-1" stroke="none" strokeWidth="1" fill="none" fillRule="evenodd"><g id="Dribbble-Light-Preview" transform="translate(-220.000000, -6684.000000)" fill="#1e2c4c"><g id="icons" transform="translate(56.000000, 160.000000)"><path d="M164.292308,6524.36583 L164.292308,6524.36583 C163.902564,6524.77071 163.902564,6525.42619 164.292308,6525.83004 L172.555873,6534.39267 C173.33636,6535.20244 174.602528,6535.20244 175.383014,6534.39267 L183.70754,6525.76791 C184.093286,6525.36716 184.098283,6524.71997 183.717533,6524.31405 C183.328789,6523.89985 182.68821,6523.89467 182.29347,6524.30266 L174.676479,6532.19636 C174.285736,6532.60124 173.653152,6532.60124 173.262409,6532.19636 L165.705379,6524.36583 C165.315635,6523.96094 164.683051,6523.96094 164.292308,6524.36583" id="arrow_down-[#1e2c4c]"></path></g></g></g></g></svg>
-                                </button>
-                              </td>
+                <>
+                  <div className="div-29">
+                    <div className="div-30">Lotti Presentati</div>
+                  </div>
+                  <div className="div-28">
+                    <div className="column">
+                      <div className="filters-container">
+                        <div className="filters">
+                          <div className="div-29">
+                            <div className="div-30">{lotti.length} lotti caricati</div>
+                          </div>
+                          <div className="filter-item">
+                            <label>Cerca</label>
+                            <div className="custom-input-container">
+                              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M9.16667 15.8333C12.8486 15.8333 15.8333 12.8486 15.8333 9.16667C15.8333 5.48477 12.8486 2.5 9.16667 2.5C5.48477 2.5 2.5 5.48477 2.5 9.16667C2.5 12.8486 5.48477 15.8333 9.16667 15.8333Z" stroke="#1E2C4C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                                <path d="M17.5 17.5L13.875 13.875" stroke="#1E2C4C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                              </svg>
+                              <input type="text" placeholder="Cosa cerchi?" className="custom-input" value={searchTerm} onChange={handleSearchChange} />
+                            </div>
+                            <div className="underline"></div>
+                          </div>
+                          <div className="filter-item">
+                            <label>Filtra per asta</label>
+                            <select className="ccc select-with-svg" name="asta" value={filterAsta} onChange={handleFilterAstaChange}>
+                              <option className="option-transparent" value="">Seleziona un'asta</option>
+                              {aste.map((asta) => (
+                                <option key={asta.id} value={asta.nome} className="option-transparent">{asta.nome}</option>
+                              ))}
+                            </select>
+                          </div>
+                          <div className="filter-item">
+                            <label>Ordina per</label>
+                            <select className="ccc select-with-svg" name="asta" value={sortOrder} onChange={handleSortOrderChange}>
+                              <option className="option-transparent" value="rilevanza">Rilevanza</option>
+                              <option className="option-transparent" value="prezzo">Prezzo</option>
+                              <option className="option-transparent" value="data">Data</option>
+                            </select>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="bulk-action-container">
+                        <select className="ccc1 select-with-svg" name="actions" value={bulkAction} onChange={(e) => setBulkAction(e.target.value)}>
+                          <option className="option-transparent" value="">Azioni</option>
+                          <option className="option-transparent" value="elimina">Elimina</option>
+                          <option className="option-transparent" value="archivia">Archivia</option>
+                        </select>
+                        <button className="div-40x" onClick={handleBulkAction}>Applica</button>
+                      </div>
+                      <div className="div-31">
+                        <table className="aste-table">
+                          <thead>
+                            <tr>
+                              <th><input type="checkbox" onChange={() => handleSelectAll(lotti)} /></th>
+                              <th>Copertina</th>
+                              <th>Nome</th>
+                              <th>Categoria</th>
+                              <th>Prezzo Iniziale</th>
+                              <th>Azioni</th>
                             </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                          </thead>
+                          <tbody>
+                            {filteredLotti.map((lotto, index) => (
+                              <tr key={index}>
+                                <td><input type="checkbox" checked={selectedItems.includes(lotto.id)} onChange={() => handleSelect(lotto.id)} /></td>
+                                <td><img src={lotto.imageUrls ? lotto.imageUrls[0] : ''} alt={lotto.nome} className="copertina-img" /></td>
+                                <td>{lotto.nome}</td>
+                                <td>{lotto.categoria}</td>
+                                <td>{lotto.prezzoIniziale}</td>
+                                <td>
+                                  <select className="ccc1 select-with-svg" name="actions" onChange={(e) => {
+                                    if (e.target.value === 'elimina') {
+                                      handleDelete(lotto.id, 'lotti');
+                                    } else if (e.target.value === 'modifica') {
+                                      handleEdit(lotto.id, 'lotti');
+                                    }
+                                  }}>
+                                    <option className="option-transparent" value="">Azioni</option>
+                                    <option className="option-transparent" value="elimina">Elimina</option>
+                                    <option className="option-transparent" value="modifica">Modifica</option>
+                                  </select>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                    <div className="column-2">
+                      <div className="div-39">
+                        <div className="div-40" onClick={() => handleViewChange('presentaLotto')}>Presenta Lotto</div>
+                      </div>
                     </div>
                   </div>
-                  <div className="column-2">
-                    <div className="div-39">
-                      <div className="div-40" onClick={() => handleViewChange('presentaLotto')} >Crea Lotto</div>
-                    </div>
-                  </div>
-                </div>
+                </>
               )}
 
               {currentView === 'utentiCaricati' && (
@@ -501,12 +650,17 @@ const HomePage = () => {
                               <td>{utente.nome}</td>
                               <td>{utente.email}</td>
                               <td>
-                                <button onClick={() => handleEdit(utente.id, 'utenti')}>
-                                  <svg fill="#073b4c" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" stroke="#073b4c" className="icon glyph"><g id="SVGRepo_bgCarrier" strokeWidth="0"></g><g id="SVGRepo_tracerCarrier" strokeLinecap="round" strokeLinejoin="round"></g><g id="SVGRepo_iconCarrier"><path d="M8.661,19.113,3,21l1.887-5.661ZM20.386,7.388a2.1,2.1,0,0,0,0-2.965l-.809-.809a2.1,2.1,0,0,0-2.965,0L6.571,13.655l3.774,3.774Z"></path></g></svg>
-                                </button>
-                                <button onClick={() => handleDelete(utente.id, 'utenti')}>
-                                  <svg fill="#065a74" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" stroke="#065a74" className="icon glyph"><g id="SVGRepo_bgCarrier" strokeWidth="0"></g><g id="SVGRepo_tracerCarrier" strokeLinecap="round" strokeLinejoin="round"></g><g id="SVGRepo_iconCarrier"><path d="M17,4V5H15V4H9V5H7V4A2,2,0,0,1,9,2h6A2,2,0,0,1,17,4Z"></path><path d="M20,6H4A1,1,0,0,0,4,8H5V20a2,2,0,0,0,2,2H17a2,2,0,0,0,2-2V8h1a1,1,0,0,0,0-2ZM11,17a1,1,0,0,1-2,0V11a1,1,0,0,1,2,0Zm4,0a1,1,0,0,1-2,0V11a1,1,0,0,1,2,0Z"></path></g></svg>
-                                </button>
+                                <select className="ccc select-with-svg" name="actions" onChange={(e) => {
+                                  if (e.target.value === 'elimina') {
+                                    handleDelete(utente.id, 'utenti');
+                                  } else if (e.target.value === 'modifica') {
+                                    handleEdit(utente.id, 'utenti');
+                                  }
+                                }}>
+                                  <option className="option-transparent" value="">Azioni</option>
+                                  <option className="option-transparent" value="elimina">Elimina</option>
+                                  <option className="option-transparent" value="modifica">Modifica</option>
+                                </select>
                               </td>
                             </tr>
                           ))}
@@ -526,24 +680,19 @@ const HomePage = () => {
                         <input type="text" className='ccc' name="nome" />
                         <label className="text">Descrizione:</label>
                         <textarea className='cc' name="descrizione" />
+                        <label className="text">Copertina:</label>
+                        <input className='ccc' type="file" onChange={handleImagesChange} accept="image/*" multiple />
                         <label className="text">Categoria:</label>
-                        <select className='ccc' name="categoria" onChange={handleAuctionCategoryChange}>
-                          <option value="">Seleziona categoria</option>
+                        <select className='ccc' name="categoria">
                           <option value="a tempo">A tempo</option>
                           <option value="live">Live</option>
                         </select>
-                        {auctionCategory === 'a tempo' && (
-                          <>
-                            <label className="text">Ore:</label>
-                            <input type="number" className='ccc' name="ore" value={hours} onChange={handleHoursChange} />
-                          </>
-                        )}
-                        <label className="text">Copertina:</label>
-                        <input className='ccc' type="file" onChange={handleImagesChange} accept="image/*" multiple />
                         <label className="text">Data Inizio:</label>
                         <input className='ccc' type="date" name="dataInizio" />
                         <label className="text">Data Fine:</label>
                         <input className='ccc' type="date" name="dataFine" />
+                        <label className="text">Ore:</label>
+                        <input className='ccc' type="number" name="ore" />
                         <button className="div-40" type="submit">Salva Asta</button>
                       </div>
                     </form>
@@ -561,24 +710,23 @@ const HomePage = () => {
                         <input type="text" className='ccc' name="nome" value={currentAsta?.nome || ''} onChange={(e) => handleChange(e, 'asta')} />
                         <label className="text">Descrizione:</label>
                         <textarea className='cc' name="descrizione" value={currentAsta?.descrizione || ''} onChange={(e) => handleChange(e, 'asta')} />
+                        <label className="text">Copertina:</label>
+                        <input className='ccc' type="file" onChange={handleImagesChange} accept="image/*" multiple />
                         <label className="text">Categoria:</label>
-                        <select className='ccc' name="categoria" value={auctionCategory} onChange={handleAuctionCategoryChange}>
-                          <option value="">Seleziona categoria</option>
+                        <select className='ccc' name="categoria" value={currentAsta?.categoria || ''} onChange={(e) => handleChange(e, 'asta')}>
                           <option value="a tempo">A tempo</option>
                           <option value="live">Live</option>
                         </select>
-                        {auctionCategory === 'a tempo' && (
-                          <>
-                            <label className="text">Ore:</label>
-                            <input type="number" className='ccc' name="ore" value={hours} onChange={handleHoursChange} />
-                          </>
-                        )}
-                        <label className="text">Copertina:</label>
-                        <input className='ccc' type="file" onChange={handleImagesChange} accept="image/*" multiple />
                         <label className="text">Data Inizio:</label>
                         <input className='ccc' type="date" name="dataInizio" value={currentAsta?.dataInizio || ''} onChange={(e) => handleChange(e, 'asta')} />
                         <label className="text">Data Fine:</label>
                         <input className='ccc' type="date" name="dataFine" value={currentAsta?.dataFine || ''} onChange={(e) => handleChange(e, 'asta')} />
+                        {currentAsta?.categoria === 'a tempo' && (
+                          <>
+                            <label className="text">Ore:</label>
+                            <input className='ccc' type="number" name="ore" value={currentAsta?.ore || ''} onChange={(e) => handleChange(e, 'asta')} />
+                          </>
+                        )}
                         <button className="div-40" type="submit">Aggiorna Asta</button>
                       </div>
                     </form>
@@ -676,8 +824,9 @@ const HomePage = () => {
           </div>
         </div>
       </div>
+      <Footer mobile={isMobile ? "footer-mobile" : "footer-desktop"} />
     </div>
   );
-}
+};
 
 export default HomePage;
